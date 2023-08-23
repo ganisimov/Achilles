@@ -10,7 +10,8 @@ exportToAres(
   resultsDatabaseSchema,
   vocabDatabaseSchema,
   outputPath,
-  reports = c()
+  reports = c(),
+  numThreads = 1
 )
 }
 \arguments{
@@ -24,7 +25,9 @@ exportToAres(
 
 \item{outputPath}{A folder location to save the JSON files. Default is current working folder}
 
-\item{reports}{vector of reports to run, c() defaults to all reports
+\item{reports}{vector of reports to run, c() defaults to all reports}
+
+\item{numThreads}{Number of threads. Experiment in your environment to find optimal value. Default is 1.
 
 See \code{showReportTypes} for a list of all report types}
 }

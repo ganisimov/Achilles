@@ -1,5 +1,5 @@
 
-generateAOProcedureReports <- function(connectionDetails, proceduresData, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath)
+generateAOProcedureReports <- function(connectionDetails, proceduresData, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating procedure reports")
   queryPrevalenceByGenderAgeYear <- SqlRender::loadRenderTranslateSql(
@@ -50,7 +50,16 @@ generateAOProcedureReports <- function(connectionDetails, proceduresData, cdmDat
   dataAgeAtFirstOccurrence <- DatabaseConnector::querySql(conn,queryAgeAtFirstOccurrence)    
   dataProcedureFrequencyDistribution <- DatabaseConnector::querySql(conn,queryProcedureFrequencyDistribution)
   
-  buildProcedureReport <- function(concept_id) {
+  buildProcedureReport <- function(
+    concept_id,
+    proceduresData,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataProcedureFrequencyDistribution,
+    dataProceduresByType,
+    dataAgeAtFirstOccurrence,
+    outputPath
+  ) {
     summaryRecord <- proceduresData[proceduresData$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -65,13 +74,24 @@ generateAOProcedureReports <- function(connectionDetails, proceduresData, cdmDat
     report$PROCEDURES_BY_TYPE <- dataProceduresByType[dataProceduresByType$PROCEDURE_CONCEPT_ID == concept_id,c(4,5)]
     report$AGE_AT_FIRST_OCCURRENCE <- dataAgeAtFirstOccurrence[dataAgeAtFirstOccurrence$CONCEPT_ID == concept_id,c(2,3,4,5,6,7,8,9)]
 
-    dir.create(paste0(outputPath,"/concepts/procedure_occurrence"),recursive=T,showWarnings = F)        
     filename <- paste(outputPath, "/concepts/procedure_occurrence/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)  
   }
 
+  dir.create(paste0(outputPath,"/concepts/procedure_occurrence"),recursive=T,showWarnings = F)
   uniqueConcepts <- unique(proceduresData$CONCEPT_ID)
-  x <- lapply(uniqueConcepts, buildProcedureReport)  
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildProcedureReport,
+    proceduresData,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataProcedureFrequencyDistribution,
+    dataProceduresByType,
+    dataAgeAtFirstOccurrence,
+    outputPath
+  )
 }
 
 generateAOPersonReport <- function(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath)
@@ -370,10 +390,10 @@ generateAOObservationPeriodReport <- function(connectionDetails, cdmDatabaseSche
   write(jsonlite::toJSON(output),filename)  
 }
 
-generateAOVisitReports <- function(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath)
+generateAOVisitReports <- function(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating visit reports")
-  
+
   queryVisits <- SqlRender::loadRenderTranslateSql(
     sqlFilename = "export/visit/sqlVisitTreemap.sql",
     packageName = "Achilles",
@@ -381,7 +401,7 @@ generateAOVisitReports <- function(connectionDetails, cdmDatabaseSchema, results
     results_database_schema = resultsDatabaseSchema,
     vocab_database_schema = vocabDatabaseSchema
   )
-  
+
   queryPrevalenceByGenderAgeYear <- SqlRender::loadRenderTranslateSql(
     sqlFilename = "export/visit/sqlPrevalenceByGenderAgeYear.sql",
     packageName = "Achilles",
@@ -389,7 +409,7 @@ generateAOVisitReports <- function(connectionDetails, cdmDatabaseSchema, results
     results_database_schema = resultsDatabaseSchema,
     vocab_database_schema = vocabDatabaseSchema
   )
-  
+
   queryPrevalenceByMonth <- SqlRender::loadRenderTranslateSql(
     sqlFilename = "export/visit/sqlPrevalenceByMonth.sql",
     packageName = "Achilles",
@@ -397,7 +417,7 @@ generateAOVisitReports <- function(connectionDetails, cdmDatabaseSchema, results
     results_database_schema = resultsDatabaseSchema,
     vocab_database_schema = vocabDatabaseSchema
   )
-  
+
   queryVisitDurationByType <- SqlRender::loadRenderTranslateSql(
     sqlFilename = "export/visit/sqlVisitDurationByType.sql",
     packageName = "Achilles",
@@ -405,7 +425,7 @@ generateAOVisitReports <- function(connectionDetails, cdmDatabaseSchema, results
     results_database_schema = resultsDatabaseSchema,
     vocab_database_schema = vocabDatabaseSchema
   )
-  
+
   queryAgeAtFirstOccurrence <- SqlRender::loadRenderTranslateSql(
     sqlFilename = "export/visit/sqlAgeAtFirstOccurrence.sql",
     packageName = "Achilles",
@@ -413,39 +433,57 @@ generateAOVisitReports <- function(connectionDetails, cdmDatabaseSchema, results
     results_database_schema = resultsDatabaseSchema,
     vocab_database_schema = vocabDatabaseSchema
   )
-  
+
   conn <- DatabaseConnector::connect(connectionDetails)
-  dataVisits <-  DatabaseConnector::querySql(conn,queryVisits) 
+  dataVisits <-  DatabaseConnector::querySql(conn,queryVisits)
   names(dataVisits)[names(dataVisits) == 'CONCEPT_PATH'] <- 'CONCEPT_NAME'
-  dataPrevalenceByGenderAgeYear <- DatabaseConnector::querySql(conn,queryPrevalenceByGenderAgeYear) 
-  dataPrevalenceByMonth <- DatabaseConnector::querySql(conn,queryPrevalenceByMonth)  
-  dataVisitDurationByType <- DatabaseConnector::querySql(conn,queryVisitDurationByType)    
-  dataAgeAtFirstOccurrence <- DatabaseConnector::querySql(conn,queryAgeAtFirstOccurrence)    
-  
-  buildVisitReport <- function(concept_id) {
+  dataPrevalenceByGenderAgeYear <- DatabaseConnector::querySql(conn,queryPrevalenceByGenderAgeYear)
+  dataPrevalenceByMonth <- DatabaseConnector::querySql(conn,queryPrevalenceByMonth)
+  dataVisitDurationByType <- DatabaseConnector::querySql(conn,queryVisitDurationByType)
+  dataAgeAtFirstOccurrence <- DatabaseConnector::querySql(conn,queryAgeAtFirstOccurrence)
+
+  buildVisitReport <- function(
+    concept_id,
+    dataVisits,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataVisitDurationByType,
+    dataAgeAtFirstOccurrence,
+    outputPath
+  ) {
     summaryRecord <- dataVisits[dataVisits$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
-    report$CDM_TABLE_NAME <- "VISIT_OCCURRENCE"    
+    report$CDM_TABLE_NAME <- "VISIT_OCCURRENCE"
     report$CONCEPT_NAME <- summaryRecord$CONCEPT_NAME
     report$NUM_PERSONS <- summaryRecord$NUM_PERSONS
     report$PERCENT_PERSONS <-summaryRecord$PERCENT_PERSONS
-    report$RECORDS_PER_PERSON <- summaryRecord$RECORDS_PER_PERSON    
-    report$PREVALENCE_BY_GENDER_AGE_YEAR <- dataPrevalenceByGenderAgeYear[dataPrevalenceByGenderAgeYear$CONCEPT_ID == concept_id,c(3,4,5,6)]    
+    report$RECORDS_PER_PERSON <- summaryRecord$RECORDS_PER_PERSON
+    report$PREVALENCE_BY_GENDER_AGE_YEAR <- dataPrevalenceByGenderAgeYear[dataPrevalenceByGenderAgeYear$CONCEPT_ID == concept_id,c(3,4,5,6)]
     report$PREVALENCE_BY_MONTH <- dataPrevalenceByMonth[dataPrevalenceByMonth$CONCEPT_ID == concept_id,c(3,4)]
     report$VISIT_DURATION_BY_TYPE <- dataVisitDurationByType[dataVisitDurationByType$CONCEPT_ID == concept_id,c(2,3,4,5,6,7,8,9)]
     report$AGE_AT_FIRST_OCCURRENCE <- dataAgeAtFirstOccurrence[dataAgeAtFirstOccurrence$CONCEPT_ID == concept_id,c(2,3,4,5,6,7,8,9)]
-    
-    dir.create(paste0(outputPath,"/concepts/visit_occurrence"),recursive=T,showWarnings = F)
-    filename <- paste(outputPath, "/concepts/visit_occurrence/concept_" , concept_id , ".json", sep='')  
-    write(jsonlite::toJSON(report),filename)  
+
+    filename <- paste(outputPath, "/concepts/visit_occurrence/concept_" , concept_id , ".json", sep='')
+    write(jsonlite::toJSON(report),filename)
   }
-  
+
+  dir.create(paste0(outputPath,"/concepts/visit_occurrence"),recursive=T,showWarnings = F)
   uniqueConcepts <- unique(dataVisits$CONCEPT_ID)
-  x <- lapply(uniqueConcepts, buildVisitReport)  
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildVisitReport,
+    dataVisits,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataVisitDurationByType,
+    dataAgeAtFirstOccurrence,
+    outputPath
+  )
 }
 
-generateAOVisitDetailReports <- function(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath)
+generateAOVisitDetailReports <- function(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating visit_detail reports")
   
@@ -506,7 +544,15 @@ generateAOVisitDetailReports <- function(connectionDetails, cdmDatabaseSchema, r
   dataVisitDetailDurationByType <- DatabaseConnector::querySql(conn,queryVisitDetailDurationByType)    
   dataAgeAtFirstOccurrence <- DatabaseConnector::querySql(conn,queryAgeAtFirstOccurrence)    
   
-  buildVisitDetailReport <- function(concept_id) {
+  buildVisitDetailReport <- function(
+    concept_id,
+    dataVisitDetails,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataVisitDetailDurationByType,
+    dataAgeAtFirstOccurrence,
+    outputPath
+  ) {
     summaryRecord <- dataVisitDetails[dataVisitDetails$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -520,13 +566,23 @@ generateAOVisitDetailReports <- function(connectionDetails, cdmDatabaseSchema, r
     report$VISIT_DETAIL_DURATION_BY_TYPE <- dataVisitDetailDurationByType[dataVisitDetailDurationByType$CONCEPT_ID == concept_id,c(2,3,4,5,6,7,8,9)]
     report$AGE_AT_FIRST_OCCURRENCE <- dataAgeAtFirstOccurrence[dataAgeAtFirstOccurrence$CONCEPT_ID == concept_id,c(2,3,4,5,6,7,8,9)]
 
-    dir.create(paste0(outputPath,"/concepts/visit_detail"),recursive=T,showWarnings = F)    
     filename <- paste(outputPath, "/concepts/visit_detail/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)      
   }
   
-  uniqueConcepts <- unique(dataVisitDetails$CONCEPT_ID)  
-  x <- lapply(uniqueConcepts, buildVisitDetailReport)  
+  uniqueConcepts <- unique(dataVisitDetails$CONCEPT_ID)
+  dir.create(paste0(outputPath,"/concepts/visit_detail"),recursive=T,showWarnings = F)
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildVisitDetailReport,
+    dataVisitDetails,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataVisitDetailDurationByType,
+    dataAgeAtFirstOccurrence,
+    outputPath
+  )
 }
 
 generateAOMetadataReport <- function(connectionDetails, cdmDatabaseSchema, outputPath)
@@ -547,7 +603,7 @@ generateAOMetadataReport <- function(connectionDetails, cdmDatabaseSchema, outpu
   }
 }
 
-generateAOObservationReports <- function(connectionDetails, observationsData, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath)
+generateAOObservationReports <- function(connectionDetails, observationsData, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating Observation reports")
 
@@ -599,8 +655,16 @@ generateAOObservationReports <- function(connectionDetails, observationsData, cd
   dataAgeAtFirstOccurrence <- DatabaseConnector::querySql(conn,queryAgeAtFirstOccurrence)
   dataObsFrequencyDistribution <- DatabaseConnector::querySql(conn,queryObsFrequencyDistribution)
   
-  uniqueConcepts <- unique(observationsData$CONCEPT_ID)  
-  buildObservationReport <- function(concept_id) {
+  buildObservationReport <- function(
+    concept_id,
+    observationsData,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataObsFrequencyDistribution,
+    dataObservationsByType,
+    dataAgeAtFirstOccurrence,
+    outputPath
+  ) {
     summaryRecord <- observationsData[observationsData$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -615,13 +679,24 @@ generateAOObservationReports <- function(connectionDetails, observationsData, cd
     report$OBSERVATIONS_BY_TYPE <- dataObservationsByType[dataObservationsByType$OBSERVATION_CONCEPT_ID == concept_id,c(4,5)]
     report$AGE_AT_FIRST_OCCURRENCE <- dataAgeAtFirstOccurrence[dataAgeAtFirstOccurrence$CONCEPT_ID == concept_id,c(2,3,4,5,6,7,8,9)]
     
-    dir.create(paste0(outputPath,"/concepts/observation"),recursive=T,showWarnings = F)    
     filename <- paste(outputPath, "/concepts/observation/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)  
   }
-  
+
+  dir.create(paste0(outputPath,"/concepts/observation"),recursive=T,showWarnings = F)
   uniqueConcepts <- unique(observationsData$CONCEPT_ID)
-  x <- lapply(uniqueConcepts, buildObservationReport)  
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildObservationReport,
+    observationsData,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataObsFrequencyDistribution,
+    dataObservationsByType,
+    dataAgeAtFirstOccurrence,
+    outputPath
+  )
 }
 
 generateAOCdmSourceReport <- function(connectionDetails, cdmDatabaseSchema, outputPath)
@@ -659,7 +734,7 @@ generateAODashboardReport <- function(outputPath)
   write(jsonOutput, file=paste(outputPath, "/dashboard.json", sep=""))  
 }
 
-generateAOMeasurementReports <- function(connectionDetails, dataMeasurements, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath)
+generateAOMeasurementReports <- function(connectionDetails, dataMeasurements, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating Measurement reports")
   queryPrevalenceByGenderAgeYear <- SqlRender::loadRenderTranslateSql(
@@ -756,7 +831,21 @@ generateAOMeasurementReports <- function(connectionDetails, dataMeasurements, cd
   dataFrequencyDistribution <- DatabaseConnector::querySql(conn,queryFrequencyDistribution)
   
   uniqueConcepts <- unique(dataPrevalenceByMonth$CONCEPT_ID)
-  buildMeasurementReport <- function(concept_id) {
+  buildMeasurementReport <- function(
+    concept_id,
+    dataMeasurements,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataFrequencyDistribution,
+    dataMeasurementsByType,
+    dataAgeAtFirstOccurrence,
+    dataRecordsByUnit,
+    dataMeasurementValueDistribution,
+    dataLowerLimitDistribution,
+    dataUpperLimitDistribution,
+    dataValuesRelativeToNorm,
+    outputPath
+  ) {
     summaryRecord <- dataMeasurements[dataMeasurements$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -777,15 +866,31 @@ generateAOMeasurementReports <- function(connectionDetails, dataMeasurements, cd
     report$UPPER_LIMIT_DISTRIBUTION <- dataUpperLimitDistribution[dataUpperLimitDistribution$CONCEPT_ID == concept_id,c(2,3,4,5,6,7,8,9)]
     report$VALUES_RELATIVE_TO_NORM <- dataValuesRelativeToNorm[dataValuesRelativeToNorm$MEASUREMENT_CONCEPT_ID == concept_id,c(4,5)]
     
-    dir.create(paste0(outputPath,"/concepts/measurement"),recursive=T,showWarnings = F)    
     filename <- paste(outputPath, "/concepts/measurement/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)  
   }
-  
-  x <- lapply(uniqueConcepts, buildMeasurementReport)  
+
+  dir.create(paste0(outputPath,"/concepts/measurement"),recursive=T,showWarnings = F)
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildMeasurementReport,
+    dataMeasurements,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataFrequencyDistribution,
+    dataMeasurementsByType,
+    dataAgeAtFirstOccurrence,
+    dataRecordsByUnit,
+    dataMeasurementValueDistribution,
+    dataLowerLimitDistribution,
+    dataUpperLimitDistribution,
+    dataValuesRelativeToNorm,
+    outputPath
+  )
 }
 
-generateAODrugEraReports <- function(connectionDetails, dataDrugEra, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath) 
+generateAODrugEraReports <- function(connectionDetails, dataDrugEra, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating drug era reports")
 
@@ -828,7 +933,15 @@ generateAODrugEraReports <- function(connectionDetails, dataDrugEra, cdmDatabase
   dataPrevalenceByMonth <- DatabaseConnector::querySql(conn,queryPrevalenceByMonth)
   dataLengthOfEra <- DatabaseConnector::querySql(conn,queryLengthOfEra)
   uniqueConcepts <- unique(dataDrugEra$CONCEPT_ID)
-  buildDrugEraReport <- function(concept_id) {
+  buildDrugEraReport <- function(
+    concept_id,
+    dataDrugEra,
+    dataAgeAtFirstExposure,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataLengthOfEra,
+    outputPath
+  ) {
     summaryRecord <- dataDrugEra[dataDrugEra$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -842,15 +955,25 @@ generateAODrugEraReports <- function(connectionDetails, dataDrugEra, cdmDatabase
     report$PREVALENCE_BY_MONTH <- dataPrevalenceByMonth[dataPrevalenceByMonth$CONCEPT_ID == concept_id,c(2,3)]
     report$LENGTH_OF_ERA <- dataLengthOfEra[dataLengthOfEra$CONCEPT_ID == concept_id, c(2,3,4,5,6,7,8,9)]
     
-    dir.create(paste0(outputPath,"/concepts/drug_era"),recursive=T,showWarnings = F)        
     filename <- paste(outputPath, "/concepts/drug_era/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)  
   }
   
-  x <- lapply(uniqueConcepts, buildDrugEraReport)  
+  dir.create(paste0(outputPath,"/concepts/drug_era"),recursive=T,showWarnings = F)
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildDrugEraReport,
+    dataDrugEra,
+    dataAgeAtFirstExposure,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataLengthOfEra,
+    outputPath
+  )
 }
 
-generateAODrugReports <- function(connectionDetails, dataDrugs, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath) 
+generateAODrugReports <- function(connectionDetails, dataDrugs, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating drug reports")
   
@@ -930,7 +1053,19 @@ generateAODrugReports <- function(connectionDetails, dataDrugs, cdmDatabaseSchem
   dataDrugFrequencyDistribution <- DatabaseConnector::querySql(conn,queryDrugFrequencyDistribution)
   
   uniqueConcepts <- unique(dataPrevalenceByMonth$CONCEPT_ID)
-  buildDrugReport <- function(concept_id) {
+  buildDrugReport <- function(
+    concept_id,
+    dataDrugs,
+    dataAgeAtFirstExposure,
+    dataDaysSupplyDistribution,
+    dataDrugsByType,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataDrugFrequencyDistribution,
+    dataQuantityDistribution,
+    dataRefillsDistribution,
+    outputPath
+  ) {
     summaryRecord <- dataDrugs[dataDrugs$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -948,15 +1083,29 @@ generateAODrugReports <- function(connectionDetails, dataDrugs, cdmDatabaseSchem
     report$QUANTITY_DISTRIBUTION <- dataQuantityDistribution[dataQuantityDistribution$DRUG_CONCEPT_ID == concept_id, c(2,3,4,5,6,7,8,9)]
     report$REFILLS_DISTRIBUTION <- dataRefillsDistribution[dataRefillsDistribution$DRUG_CONCEPT_ID == concept_id, c(2,3,4,5,6,7,8,9)]
 
-    dir.create(paste0(outputPath,"/concepts/drug_exposure"),recursive=T,showWarnings = F)        
     filename <- paste(outputPath, "/concepts/drug_exposure/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)  
   }
-  
-  x <- lapply(uniqueConcepts, buildDrugReport)  
+
+  dir.create(paste0(outputPath,"/concepts/drug_exposure"),recursive=T,showWarnings = F)
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildDrugReport,
+    dataDrugs,
+    dataAgeAtFirstExposure,
+    dataDaysSupplyDistribution,
+    dataDrugsByType,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataDrugFrequencyDistribution,
+    dataQuantityDistribution,
+    dataRefillsDistribution,
+    outputPath
+  )
 }
 
-generateAODeviceReports <- function(connectionDetails, dataDevices, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath) 
+generateAODeviceReports <- function(connectionDetails, dataDevices, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads) 
 {
   writeLines("Generating device exposure reports")
   
@@ -1009,7 +1158,16 @@ generateAODeviceReports <- function(connectionDetails, dataDevices, cdmDatabaseS
   dataDeviceFrequencyDistribution <- DatabaseConnector::querySql(conn,queryDeviceFrequencyDistribution)
   
   uniqueConcepts <- unique(dataDevices$CONCEPT_ID)
-  buildDeviceReport <- function(concept_id) {
+  buildDeviceReport <- function(
+    concept_id,
+    dataDevices,
+    dataAgeAtFirstExposure,
+    dataDevicesByType,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataDeviceFrequencyDistribution,
+    outputPath
+  ) {
     summaryRecord <- dataDevices[dataDevices$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -1024,15 +1182,26 @@ generateAODeviceReports <- function(connectionDetails, dataDevices, cdmDatabaseS
     report$PREVALENCE_BY_MONTH <- dataPrevalenceByMonth[dataPrevalenceByMonth$CONCEPT_ID == concept_id,c(3,4)]
     report$DEVICE_FREQUENCY_DISTRIBUTION <- dataDeviceFrequencyDistribution[dataDeviceFrequencyDistribution$CONCEPT_ID == concept_id,c(3,4)]
 
-    dir.create(paste0(outputPath,"/concepts/device_exposure"),recursive=T,showWarnings = F)        
     filename <- paste(outputPath, "/concepts/device_exposure/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)  
   }
-  
-  x <- lapply(uniqueConcepts, buildDeviceReport)  
+
+  dir.create(paste0(outputPath,"/concepts/device_exposure"),recursive=T,showWarnings = F)
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildDeviceReport,
+    dataDevices,
+    dataAgeAtFirstExposure,
+    dataDevicesByType,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataDeviceFrequencyDistribution,
+    outputPath
+  )
 }
 
-generateAOConditionReports <- function(connectionDetails, dataConditions, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath) 
+generateAOConditionReports <- function(connectionDetails, dataConditions, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating condition reports")
   queryPrevalenceByGenderAgeYear <- SqlRender::loadRenderTranslateSql(
@@ -1083,7 +1252,15 @@ generateAOConditionReports <- function(connectionDetails, dataConditions, cdmDat
   dataAgeAtFirstDiagnosis <- DatabaseConnector::querySql(conn,queryAgeAtFirstDiagnosis)      
   uniqueConcepts <- unique(dataPrevalenceByMonth$CONCEPT_ID)
   
-  buildConditionReport <- function(concept_id) {
+  buildConditionReport <- function(
+    concept_id,
+    dataConditions,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataConditionsByType,
+    dataAgeAtFirstDiagnosis,
+    outputPath
+  ) {
     summaryRecord <- dataConditions[dataConditions$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -1097,15 +1274,25 @@ generateAOConditionReports <- function(connectionDetails, dataConditions, cdmDat
     report$CONDITIONS_BY_TYPE <- dataConditionsByType[dataConditionsByType$CONDITION_CONCEPT_ID == concept_id,c(2,3)]
     report$AGE_AT_FIRST_DIAGNOSIS <- dataAgeAtFirstDiagnosis[dataAgeAtFirstDiagnosis$CONCEPT_ID == concept_id,c(2,3,4,5,6,7,8,9)]
     
-    dir.create(paste0(outputPath,"/concepts/condition_occurrence"),recursive=T,showWarnings = F)        
     filename <- paste(outputPath, "/concepts/condition_occurrence/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)  
   }
-  
-  x <- lapply(uniqueConcepts, buildConditionReport)  
+
+  dir.create(paste0(outputPath,"/concepts/condition_occurrence"),recursive=T,showWarnings = F)
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildConditionReport,
+    dataConditions,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataConditionsByType,
+    dataAgeAtFirstDiagnosis,
+    outputPath
+  )
 }
 
-generateAOConditionEraReports <- function(connectionDetails, dataConditionEra, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath)
+generateAOConditionEraReports <- function(connectionDetails, dataConditionEra, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath, numThreads)
 {
   writeLines("Generating condition era reports")
 
@@ -1157,7 +1344,15 @@ generateAOConditionEraReports <- function(connectionDetails, dataConditionEra, c
   dataAgeAtFirstDiagnosis <- DatabaseConnector::querySql(conn, queryAgeAtFirstDiagnosis)
   uniqueConcepts <- unique(dataConditionEra$CONCEPT_ID)
 
-  buildConditionEraReport <- function(concept_id) {
+  buildConditionEraReport <- function(
+    concept_id,
+    dataConditionEra,
+    dataAgeAtFirstDiagnosis,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataLengthOfEra,
+    outputPath
+  ) {
     summaryRecord <- dataConditionEra[dataConditionEra$CONCEPT_ID==concept_id,]
     report <- {}
     report$CONCEPT_ID <- concept_id
@@ -1170,13 +1365,23 @@ generateAOConditionEraReports <- function(connectionDetails, dataConditionEra, c
     report$PREVALENCE_BY_GENDER_AGE_YEAR <- dataPrevalenceByGenderAgeYear[dataPrevalenceByGenderAgeYear$CONCEPT_ID == concept_id,c(2,3,4,5)]  
     report$PREVALENCE_BY_MONTH <- dataPrevalenceByMonth[dataPrevalenceByMonth$CONCEPT_ID == concept_id,c(2,3)]
     report$LENGTH_OF_ERA <- dataLengthOfEra[dataLengthOfEra$CONCEPT_ID == concept_id, c(2,3,4,5,6,7,8,9)]
-    
-    dir.create(paste0(outputPath,"/concepts/condition_era"),recursive=T,showWarnings = F)        
+
     filename <- paste(outputPath, "/concepts/condition_era/concept_" , concept_id , ".json", sep='')  
     write(jsonlite::toJSON(report),filename)  
   }
-  
-  x <- lapply(uniqueConcepts, buildConditionEraReport)
+
+  dir.create(paste0(outputPath,"/concepts/condition_era"),recursive=T,showWarnings = F)
+  x <- papply(
+    numThreads = numThreads,
+    x = uniqueConcepts,
+    fun = buildConditionEraReport,
+    dataConditionEra,
+    dataAgeAtFirstDiagnosis,
+    dataPrevalenceByGenderAgeYear,
+    dataPrevalenceByMonth,
+    dataLengthOfEra,
+    outputPath
+  )
 }
 
 #' @title exportToAres
@@ -1194,7 +1399,8 @@ generateAOConditionEraReports <- function(connectionDetails, dataConditionEra, c
 #' @param outputPath		                A folder location to save the JSON files. Default is current working folder
 #' @param vocabDatabaseSchema		        string name of database schema that contains OMOP Vocabulary. Default is cdmDatabaseSchema. On SQL Server, this should specifiy both the database and the schema, so for example 'results.dbo'.
 #' @param reports                       vector of reports to run, c() defaults to all reports
-#' 
+#' @param numThreads                    Number of threads. Experiment in your environment to find optimal value. Default is 1.
+#'
 #' See \code{showReportTypes} for a list of all report types
 #' 
 #' @return none 
@@ -1204,13 +1410,19 @@ generateAOConditionEraReports <- function(connectionDetails, dataConditionEra, c
 #'@export
 #'
 exportToAres <- function(
-  connectionDetails, 
-  cdmDatabaseSchema, 
-  resultsDatabaseSchema, 
-  vocabDatabaseSchema, 
+  connectionDetails,
+  cdmDatabaseSchema,
+  resultsDatabaseSchema,
+  vocabDatabaseSchema,
   outputPath,
-  reports = c())
+  reports = c(),
+  numThreads = 1)
 {
+  stopifnot(
+    "'numThreads' must be a number" = is.numeric(numThreads),
+    "'numThreads' must be greater than zero" = numThreads > 0
+  )
+
   conn <- DatabaseConnector::connect(connectionDetails)
   on.exit(DatabaseConnector::disconnect(connection = conn))  
   
@@ -1500,22 +1712,22 @@ exportToAres <- function(
     generateAOAchillesPerformanceReport(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
   }
   
-  if (length(reports) == 0  || (length(reports) > 0 && "concept" %in% reports)) {  
+  if (length(reports) == 0  || (length(reports) > 0 && "concept" %in% reports)) {
     # concept level reporting
     conceptsFolder <- file.path(sourceOutputPath,"concepts")
     dir.create(conceptsFolder,showWarnings = F)
-    generateAOVisitReports(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
-    generateAOVisitDetailReports(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)    
-    generateAOMeasurementReports(connectionDetails, dataMeasurements, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
-    generateAOConditionReports(connectionDetails, dataConditions, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
-    generateAOConditionEraReports(connectionDetails, dataConditionEra, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
-    generateAODrugReports(connectionDetails, dataDrugs, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
-    generateAODeviceReports(connectionDetails, dataDevices, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)    
-    generateAODrugEraReports(connectionDetails, dataDrugEra, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
-    generateAOProcedureReports(connectionDetails, dataProcedures, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
-    generateAOObservationReports(connectionDetails, dataObservations, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)    
+    generateAOVisitReports(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAOVisitDetailReports(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAOMeasurementReports(connectionDetails, dataMeasurements, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAOConditionReports(connectionDetails, dataConditions, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAOConditionEraReports(connectionDetails, dataConditionEra, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAODrugReports(connectionDetails, dataDrugs, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAODeviceReports(connectionDetails, dataDevices, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAODrugEraReports(connectionDetails, dataDrugEra, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAOProcedureReports(connectionDetails, dataProcedures, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
+    generateAOObservationReports(connectionDetails, dataObservations, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath, numThreads)
   }
-  
+
   if (length(reports) == 0  || (length(reports) > 0 && "person" %in% reports)) {
     generateAOPersonReport(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, sourceOutputPath)
   }
