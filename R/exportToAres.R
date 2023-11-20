@@ -131,7 +131,7 @@ generateAOProcedureReports <- function(connectionDetails, proceduresData, cdmDat
       report$PROCEDURES_BY_TYPE <- as.data.frame(report$PROCEDURES_BY_TYPE)
       report$AGE_AT_FIRST_OCCURRENCE <- as.data.frame(report$AGE_AT_FIRST_OCCURRENCE)
 
-      filename <- paste(outputPath, "/concepts/procedure_occurrence/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/procedure_occurrence/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -241,7 +241,7 @@ generateAOAchillesPerformanceReport <- function(connectionDetails, cdmDatabaseSc
   dataPerformance <- DatabaseConnector::querySql(conn,queryAchillesPerformance)
   names(dataPerformance) <- c("analysis_id", "analysis_name","category", "elapsed_seconds")
   dataPerformance$elapsed_seconds <- format(round(as.numeric(dataPerformance$elapsed_seconds),digits = 2),nsmall = 2)
-  data.table::fwrite(dataPerformance, file.path(outputPath, "achilles-performance.csv"))
+  data.table::fwrite(dataPerformance, file.path(outputPath, "achilles-performance.csv"), scipen = 999)
 }
 
 generateAODeathReport <- function(connectionDetails, cdmDatabaseSchema, resultsDatabaseSchema, vocabDatabaseSchema, outputPath)
@@ -554,7 +554,7 @@ generateAOVisitReports <- function(connectionDetails, cdmDatabaseSchema, results
       report$VISIT_DURATION_BY_TYPE <- as.data.frame(report$VISIT_DURATION_BY_TYPE)
       report$AGE_AT_FIRST_OCCURRENCE <- as.data.frame(report$AGE_AT_FIRST_OCCURRENCE)
 
-      filename <- paste(outputPath, "/concepts/visit_occurrence/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/visit_occurrence/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -690,7 +690,7 @@ generateAOVisitDetailReports <- function(connectionDetails, cdmDatabaseSchema, r
       report$VISIT_DETAIL_DURATION_BY_TYPE <- as.data.frame(report$VISIT_DETAIL_DURATION_BY_TYPE)
       report$AGE_AT_FIRST_OCCURRENCE <- as.data.frame(report$AGE_AT_FIRST_OCCURRENCE)
 
-      filename <- paste(outputPath, "/concepts/visit_detail/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/visit_detail/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -712,7 +712,7 @@ generateAOMetadataReport <- function(connectionDetails, cdmDatabaseSchema, outpu
       cdm_database_schema = cdmDatabaseSchema
     )      
     dataMetadata <- DatabaseConnector::querySql(conn, queryMetadata) 
-    data.table::fwrite(dataMetadata, file=paste0(outputPath, "/metadata.csv"))   
+    data.table::fwrite(dataMetadata, file=paste0(outputPath, "/metadata.csv"), scipen = 999)
   }
 }
 
@@ -842,7 +842,7 @@ generateAOObservationReports <- function(connectionDetails, observationsData, cd
       report$OBSERVATIONS_BY_TYPE <- as.data.frame(report$OBSERVATIONS_BY_TYPE)
       report$AGE_AT_FIRST_OCCURRENCE <- as.data.frame(report$AGE_AT_FIRST_OCCURRENCE)
 
-      filename <- paste(outputPath, "/concepts/observation/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/observation/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -865,7 +865,7 @@ generateAOCdmSourceReport <- function(connectionDetails, cdmDatabaseSchema, outp
     )  
     
     dataCdmSource <- DatabaseConnector::querySql(conn, queryCdmSource) 
-    data.table::fwrite(dataCdmSource, file=paste0(outputPath, "/cdmsource.csv"))
+    data.table::fwrite(dataCdmSource, file=paste0(outputPath, "/cdmsource.csv"), scipen = 999)
   }
 }
 
@@ -1102,7 +1102,7 @@ generateAOMeasurementReports <- function(connectionDetails, dataMeasurements, cd
       report$UPPER_LIMIT_DISTRIBUTION <- as.data.frame(report$UPPER_LIMIT_DISTRIBUTION)
       report$VALUES_RELATIVE_TO_NORM <- as.data.frame(report$VALUES_RELATIVE_TO_NORM)
 
-      filename <- paste(outputPath, "/concepts/measurement/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/measurement/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -1220,7 +1220,7 @@ generateAODrugEraReports <- function(connectionDetails, dataDrugEra, cdmDatabase
       report$PREVALENCE_BY_MONTH <- as.data.frame(report$PREVALENCE_BY_MONTH)
       report$LENGTH_OF_ERA <- as.data.frame(report$LENGTH_OF_ERA)
 
-      filename <- paste(outputPath, "/concepts/drug_era/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/drug_era/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -1410,7 +1410,7 @@ generateAODrugReports <- function(connectionDetails, dataDrugs, cdmDatabaseSchem
       report$QUANTITY_DISTRIBUTION <- as.data.frame(report$QUANTITY_DISTRIBUTION)
       report$REFILLS_DISTRIBUTION <- as.data.frame(report$REFILLS_DISTRIBUTION)
 
-      filename <- paste(outputPath, "/concepts/drug_exposure/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/drug_exposure/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -1546,7 +1546,7 @@ generateAODeviceReports <- function(connectionDetails, dataDevices, cdmDatabaseS
       report$PREVALENCE_BY_MONTH <- as.data.frame(report$PREVALENCE_BY_MONTH)
       report$DEVICE_FREQUENCY_DISTRIBUTION <- as.data.frame(report$DEVICE_FREQUENCY_DISTRIBUTION)
 
-      filename <- paste(outputPath, "/concepts/device_exposure/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/device_exposure/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -1671,7 +1671,7 @@ generateAOConditionReports <- function(connectionDetails, dataConditions, cdmDat
       report$CONDITIONS_BY_TYPE <- as.data.frame(report$CONDITIONS_BY_TYPE)
       report$AGE_AT_FIRST_DIAGNOSIS <- as.data.frame(report$AGE_AT_FIRST_DIAGNOSIS)
 
-      filename <- paste(outputPath, "/concepts/condition_occurrence/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/condition_occurrence/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -1797,7 +1797,7 @@ generateAOConditionEraReports <- function(connectionDetails, dataConditionEra, c
       report$PREVALENCE_BY_MONTH <- as.data.frame(report$PREVALENCE_BY_MONTH)
       report$LENGTH_OF_ERA <- as.data.frame(report$LENGTH_OF_ERA)
 
-      filename <- paste(outputPath, "/concepts/condition_era/concept_" , report$CONCEPT_ID , ".json", sep='')
+      filename <- paste(outputPath, "/concepts/condition_era/concept_" , format(report$CONCEPT_ID, scientific = FALSE) , ".json", sep='')
       write(jsonlite::toJSON(report), filename)
     },
     outputPath,
@@ -1862,11 +1862,11 @@ exportToAres <- function(
     totalRecordsData <- DatabaseConnector::querySql(conn,renderedSql)
     colnames(totalRecordsData) <- c("domain", "date", "records")  
     totalRecordsData$date <- lubridate::parse_date_time(totalRecordsData$date, "ym")
-    data.table::fwrite(totalRecordsData, file=paste0(sourceOutputPath, "/datadensity-total.csv"))
+    data.table::fwrite(totalRecordsData, file=paste0(sourceOutputPath, "/datadensity-total.csv"), scipen = 999)
     
     domainAggregates <- aggregate(totalRecordsData$records, by=list(domain=totalRecordsData$domain), FUN=sum)
     names(domainAggregates) <- c("domain","count_records")
-    data.table::fwrite(domainAggregates, file=paste0(sourceOutputPath, "/records-by-domain.csv"))
+    data.table::fwrite(domainAggregates, file=paste0(sourceOutputPath, "/records-by-domain.csv"), scipen = 999)
 
     # data density - records per person
     renderedSql <- SqlRender::loadRenderTranslateSql(
@@ -1880,7 +1880,7 @@ exportToAres <- function(
     colnames(recordsPerPerson) <- c("domain", "date", "records")
     recordsPerPerson$date <- lubridate::parse_date_time(recordsPerPerson$date, "ym")  
     recordsPerPerson$records <- round(recordsPerPerson$records,2)
-    data.table::fwrite(recordsPerPerson, file=paste0(sourceOutputPath, "/datadensity-records-per-person.csv"))  
+    data.table::fwrite(recordsPerPerson, file=paste0(sourceOutputPath, "/datadensity-records-per-person.csv"), scipen = 999)
   
     # data density - concepts  per person
     renderedSql <- SqlRender::loadRenderTranslateSql(
@@ -1890,7 +1890,7 @@ exportToAres <- function(
       results_database_schema = resultsDatabaseSchema
     )  
     conceptsPerPerson <- DatabaseConnector::querySql(conn,renderedSql)
-    data.table::fwrite(conceptsPerPerson, file=paste0(sourceOutputPath, "/datadensity-concepts-per-person.csv"))
+    data.table::fwrite(conceptsPerPerson, file=paste0(sourceOutputPath, "/datadensity-concepts-per-person.csv"), scipen = 999)
     
     # data density - domains per person
     renderedSql <- SqlRender::loadRenderTranslateSql(
@@ -1901,7 +1901,7 @@ exportToAres <- function(
     )  
     domainsPerPerson <- DatabaseConnector::querySql(conn,renderedSql)
     domainsPerPerson$PERCENT_VALUE <- round(as.numeric(domainsPerPerson$PERCENT_VALUE),2)
-    data.table::fwrite(domainsPerPerson, file=paste0(sourceOutputPath, "/datadensity-domains-per-person.csv"))    
+    data.table::fwrite(domainsPerPerson, file=paste0(sourceOutputPath, "/datadensity-domains-per-person.csv"), scipen = 999)
   }
   
   if (length(reports) == 0  || (length(reports) > 0 && ("domain" %in% reports || "concept" %in% reports))) {
@@ -1930,7 +1930,7 @@ exportToAres <- function(
     dataConditions$PERCENT_PERSONS_NTILE <- dplyr::ntile(dplyr::desc(dataConditions$PERCENT_PERSONS),10)
     dataConditions$RECORDS_PER_PERSON <- format(round(dataConditions$RECORDS_PER_PERSON,1),nsmall=1)
     dataConditions$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataConditions$RECORDS_PER_PERSON),10)
-    data.table::fwrite(dataConditions, file=paste0(sourceOutputPath, "/domain-summary-condition_occurrence.csv"))  
+    data.table::fwrite(dataConditions, file=paste0(sourceOutputPath, "/domain-summary-condition_occurrence.csv"), scipen = 999)
     
     # domain summary - condition eras
     queryConditionEra <- SqlRender::loadRenderTranslateSql(
@@ -1945,7 +1945,7 @@ exportToAres <- function(
     dataConditionEra$PERCENT_PERSONS_NTILE <- dplyr::ntile(dplyr::desc(dataConditionEra$PERCENT_PERSONS),10)
     dataConditionEra$RECORDS_PER_PERSON <- format(round(dataConditionEra$RECORDS_PER_PERSON,1),nsmall=1)
     dataConditionEra$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataConditionEra$RECORDS_PER_PERSON),10)
-    data.table::fwrite(dataConditionEra, file=paste0(sourceOutputPath, "/domain-summary-condition_era.csv"))     
+    data.table::fwrite(dataConditionEra, file=paste0(sourceOutputPath, "/domain-summary-condition_era.csv"), scipen = 999)
     
     # domain summary - drugs
     queryDrugs <- SqlRender::loadRenderTranslateSql(
@@ -1960,7 +1960,7 @@ exportToAres <- function(
     dataDrugs$PERCENT_PERSONS_NTILE <- dplyr::ntile(dplyr::desc(dataDrugs$PERCENT_PERSONS),10)
     dataDrugs$RECORDS_PER_PERSON <- format(round(dataDrugs$RECORDS_PER_PERSON,1),nsmall=1)
     dataDrugs$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataDrugs$RECORDS_PER_PERSON),10)
-    data.table::fwrite(dataDrugs, file=paste0(sourceOutputPath, "/domain-summary-drug_exposure.csv"))   
+    data.table::fwrite(dataDrugs, file=paste0(sourceOutputPath, "/domain-summary-drug_exposure.csv"), scipen = 999)
     
     # domain stratification by drug type concept
     queryDrugType <- SqlRender::loadRenderTranslateSql(
@@ -1971,7 +1971,7 @@ exportToAres <- function(
       vocab_database_schema = vocabDatabaseSchema
     )  
     dataDrugType <- DatabaseConnector::querySql(conn,queryDrugType)   
-    data.table::fwrite(dataDrugType, file=paste0(sourceOutputPath, "/domain-drug-stratification.csv"))      
+    data.table::fwrite(dataDrugType, file=paste0(sourceOutputPath, "/domain-drug-stratification.csv"), scipen = 999)
 
     # domain summary - drug era
     queryDrugEra <- SqlRender::loadRenderTranslateSql(
@@ -1986,7 +1986,7 @@ exportToAres <- function(
     dataDrugEra$PERCENT_PERSONS_NTILE <- dplyr::ntile(dplyr::desc(dataDrugEra$PERCENT_PERSONS),10)
     dataDrugEra$RECORDS_PER_PERSON <- format(round(dataDrugEra$RECORDS_PER_PERSON,1),nsmall=1)
     dataDrugEra$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataDrugEra$RECORDS_PER_PERSON), 10)
-    data.table::fwrite(dataDrugEra, file=paste0(sourceOutputPath, "/domain-summary-drug_era.csv"))       
+    data.table::fwrite(dataDrugEra, file=paste0(sourceOutputPath, "/domain-summary-drug_era.csv"), scipen = 999)
     
     # domain summary - measurements
     queryMeasurements <- SqlRender::loadRenderTranslateSql(
@@ -2001,7 +2001,7 @@ exportToAres <- function(
     dataMeasurements$PERCENT_PERSONS_NTILE <- dplyr::ntile(dplyr::desc(dataMeasurements$PERCENT_PERSONS), 10)
     dataMeasurements$RECORDS_PER_PERSON <- format(round(dataMeasurements$RECORDS_PER_PERSON,1),nsmall=1)
     dataMeasurements$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataMeasurements$RECORDS_PER_PERSON), 10)
-    data.table::fwrite(dataMeasurements, file=paste0(sourceOutputPath, "/domain-summary-measurement.csv"))   
+    data.table::fwrite(dataMeasurements, file=paste0(sourceOutputPath, "/domain-summary-measurement.csv"), scipen = 999)
     
     # domain summary - observations
     queryObservations <- SqlRender::loadRenderTranslateSql(
@@ -2016,7 +2016,7 @@ exportToAres <- function(
     dataObservations$PERCENT_PERSONS_NTILE <- dplyr::ntile(dplyr::desc(dataObservations$PERCENT_PERSONS), 10)
     dataObservations$RECORDS_PER_PERSON <- format(round(dataObservations$RECORDS_PER_PERSON,1),nsmall=1)
     dataObservations$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataObservations$RECORDS_PER_PERSON), 10)
-    data.table::fwrite(dataObservations, file=paste0(sourceOutputPath, "/domain-summary-observation.csv"))      
+    data.table::fwrite(dataObservations, file=paste0(sourceOutputPath, "/domain-summary-observation.csv"), scipen = 999)
     
     # domain summary - visit details
     queryVisitDetails <- SqlRender::loadRenderTranslateSql(
@@ -2032,7 +2032,7 @@ exportToAres <- function(
     dataVisitDetails$RECORDS_PER_PERSON <- format(round(dataVisitDetails$RECORDS_PER_PERSON,1),nsmall=1)
     dataVisitDetails$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataVisitDetails$RECORDS_PER_PERSON),10)
     names(dataVisitDetails)[names(dataVisitDetails) == 'CONCEPT_PATH'] <- 'CONCEPT_NAME'
-    data.table::fwrite(dataVisitDetails, file=paste0(sourceOutputPath, "/domain-summary-visit_detail.csv"))      
+    data.table::fwrite(dataVisitDetails, file=paste0(sourceOutputPath, "/domain-summary-visit_detail.csv"), scipen = 999)
     
     # domain summary - visits
     queryVisits <- SqlRender::loadRenderTranslateSql(
@@ -2048,7 +2048,7 @@ exportToAres <- function(
     dataVisits$RECORDS_PER_PERSON <- format(round(dataVisits$RECORDS_PER_PERSON,1),nsmall=1)
     dataVisits$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataVisits$RECORDS_PER_PERSON),10)
     names(dataVisits)[names(dataVisits) == 'CONCEPT_PATH'] <- 'CONCEPT_NAME'
-    data.table::fwrite(dataVisits, file=paste0(sourceOutputPath, "/domain-summary-visit_occurrence.csv"))   
+    data.table::fwrite(dataVisits, file=paste0(sourceOutputPath, "/domain-summary-visit_occurrence.csv"), scipen = 999)
     
     # domain stratification by visit concept
     queryVisits <- SqlRender::loadRenderTranslateSql(
@@ -2059,7 +2059,7 @@ exportToAres <- function(
       vocab_database_schema = vocabDatabaseSchema
     )  
     dataVisits <- DatabaseConnector::querySql(conn,queryVisits)   
-    data.table::fwrite(dataVisits, file=paste0(sourceOutputPath, "/domain-visit-stratification.csv"))      
+    data.table::fwrite(dataVisits, file=paste0(sourceOutputPath, "/domain-visit-stratification.csv"), scipen = 999)
 
     # domain summary - procedures
     queryProcedures <- SqlRender::loadRenderTranslateSql(
@@ -2074,7 +2074,7 @@ exportToAres <- function(
     dataProcedures$PERCENT_PERSONS_NTILE <- dplyr::ntile(dplyr::desc(dataProcedures$PERCENT_PERSONS),10)
     dataProcedures$RECORDS_PER_PERSON <- format(round(dataProcedures$RECORDS_PER_PERSON,1),nsmall=1)
     dataProcedures$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataProcedures$RECORDS_PER_PERSON),10)
-    data.table::fwrite(dataProcedures, file=paste0(sourceOutputPath, "/domain-summary-procedure_occurrence.csv"))   
+    data.table::fwrite(dataProcedures, file=paste0(sourceOutputPath, "/domain-summary-procedure_occurrence.csv"), scipen = 999)
     
     # domain summary - devices
     queryDevices <- SqlRender::loadRenderTranslateSql(
@@ -2089,7 +2089,7 @@ exportToAres <- function(
     dataDevices$PERCENT_PERSONS_NTILE <- dplyr::ntile(dplyr::desc(dataDevices$PERCENT_PERSONS),10)
     dataDevices$RECORDS_PER_PERSON <- format(round(dataDevices$RECORDS_PER_PERSON,1),nsmall=1)
     dataDevices$RECORDS_PER_PERSON_NTILE <- dplyr::ntile(dplyr::desc(dataDevices$RECORDS_PER_PERSON),10)
-    data.table::fwrite(dataDevices, file=paste0(sourceOutputPath, "/domain-summary-device_exposure.csv"))    
+    data.table::fwrite(dataDevices, file=paste0(sourceOutputPath, "/domain-summary-device_exposure.csv"), scipen = 999)
   }
   
     # domain summary - provider
@@ -2103,7 +2103,7 @@ exportToAres <- function(
 	writeLines("Generating provider reports")
     dataProviders <- DatabaseConnector::querySql(conn,queryProviders)   
     dataProviders$PERCENT_PERSONS <- format(round(dataProviders$PERCENT_PERSONS,4), nsmall=4)
-    data.table::fwrite(dataProviders, file=paste0(sourceOutputPath, "/domain-summary-provider.csv"))      
+    data.table::fwrite(dataProviders, file=paste0(sourceOutputPath, "/domain-summary-provider.csv"), scipen = 999)
   
   if (length(reports) == 0  || (length(reports) > 0 && "quality" %in% reports)) {
     # quality - completeness
@@ -2119,7 +2119,7 @@ exportToAres <- function(
     if (nrow(dataCompleteness) > 100000) {
       dataCompleteness <- dataCompleteness[1:100000,]
     }
-    data.table::fwrite(dataCompleteness, file=paste0(sourceOutputPath, "/quality-completeness.csv"))   
+    data.table::fwrite(dataCompleteness, file=paste0(sourceOutputPath, "/quality-completeness.csv"), scipen = 999)
   }
 
   if (length(reports) == 0  || (length(reports) > 0 && "performance" %in% reports)) {      
